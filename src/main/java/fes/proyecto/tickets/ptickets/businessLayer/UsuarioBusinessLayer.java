@@ -6,6 +6,7 @@ import fes.proyecto.tickets.ptickets.dtos.IdDto;
 import fes.proyecto.tickets.ptickets.dtos.UsuarioDto;
 import fes.proyecto.tickets.ptickets.dtos.UsuariooDtoIn;
 import fes.proyecto.tickets.ptickets.entities.Usuario;
+import fes.proyecto.tickets.ptickets.exceptions.RecursoNoEncontradoException;
 import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
 
 import java.util.List;
@@ -36,11 +37,11 @@ public class UsuarioBusinessLayer {
     public UsuarioDto obtenerPorId(Long id) {
         return repository.findById(id)
                 .map(Usuario::toDto)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
     }
     public IdDto actualizar(Long id, UsuariooDtoIn dtoIn) {
         Usuario entity = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
 
         entity.setNombre(dtoIn.getNombre());
         entity.setEmail(dtoIn.getEmail());
@@ -52,7 +53,7 @@ public class UsuarioBusinessLayer {
 
     public IdDto deshabilitar(Long id) {
         Usuario entity = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
         entity.setActivo(false);
         repository.save(entity);
         return new IdDto(id, "Usuario deshabilitado correctamente");
