@@ -12,7 +12,7 @@ public class OpenApiConfig {
     public OpenAPI ticketsOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("API Tickets - FES")
+                        .title("API Tickets - FESA")
                         .description("API sistema de tickets. Gestión de usuarios.")
                         .version("v1"));
     }
