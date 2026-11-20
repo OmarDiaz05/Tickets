@@ -20,10 +20,6 @@ public class UsuarioBusinessLayer {
     @Autowired
     private IUsuarioRepository repository;
 
-    public boolean existe(UsuarioDtoIn dtoIn) {
-        return repository.existsByEmail(dtoIn.getEmail());
-    }
-
     public IdDto agregar(UsuarioDtoIn dtoIn) {
         if (repository.existsByEmail(dtoIn.getEmail())) {
             throw new RecursoDuplicadoException("El correo ya se encuentra registrado");
