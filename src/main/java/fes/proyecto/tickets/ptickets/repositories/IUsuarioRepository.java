@@ -11,5 +11,7 @@ import java.util.Optional;
 @Repository
 public interface IUsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByEmail(String email);
+    boolean existsByEmail(String email);
+    boolean existsByEmailAndIdNot(String email, Long id);
     List<Usuario> findByActivoTrue(); // Solo trae los que no están borrados lógicamente
 }

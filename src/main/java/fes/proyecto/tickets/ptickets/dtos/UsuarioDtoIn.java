@@ -6,15 +6,15 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class UsuariooDtoIn {
-    @NotBlank
+public class UsuarioDtoIn {
+    @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
-    
-    @Email
-    @NotBlank
+
+    @Email(message = "El correo debe tener un formato válido")
+    @NotBlank(message = "El correo es obligatorio")
     private String email;
-    
-    @NotBlank
+
+    @NotBlank(message = "La contraseña es obligatoria")
     private String password;
 
     // Conversión inversa: de DTO a Entidad

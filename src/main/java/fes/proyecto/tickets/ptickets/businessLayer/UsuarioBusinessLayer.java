@@ -1,11 +1,13 @@
 package fes.proyecto.tickets.ptickets.businessLayer;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import fes.proyecto.tickets.ptickets.dtos.IdDto;
 import fes.proyecto.tickets.ptickets.dtos.UsuarioDto;
-import fes.proyecto.tickets.ptickets.dtos.UsuariooDtoIn;
+import fes.proyecto.tickets.ptickets.dtos.UsuarioDtoIn;
 import fes.proyecto.tickets.ptickets.entities.Usuario;
+import fes.proyecto.tickets.ptickets.exceptions.RecursoDuplicadoException;
 import fes.proyecto.tickets.ptickets.exceptions.RecursoNoEncontradoException;
 import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
 
@@ -16,13 +18,16 @@ import java.util.stream.Collectors;
 public class UsuarioBusinessLayer {
 
     @Autowired
-    IUsuarioRepository repository;
+    private IUsuarioRepository repository;
 
-    public boolean existe(UsuariooDtoIn dtoIn) {
-        return repository.findByEmail(dtoIn.getEmail()).isPresent();
+    public boolean existe(UsuarioDtoIn dtoIn) {
+        return repository.existsByEmail(dtoIn.getEmail());
     }
 
-    public IdDto agregar(UsuariooDtoIn dtoIn) {
+    public IdDto agregar(UsuarioDtoIn dtoIn) {
+        if (repository.existsByEmail(dtoIn.getEmail())) {
+            throw new RecursoDuplicadoException("El correo ya se encuentra registrado");
+        }
         Usuario entity = dtoIn.toEntity();
         repository.save(entity);
         return new IdDto(entity.getId(), "Usuario registrado con éxito");
@@ -39,13 +44,18 @@ public class UsuarioBusinessLayer {
                 .map(Usuario::toDto)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
     }
-    public IdDto actualizar(Long id, UsuariooDtoIn dtoIn) {
+
+    public IdDto actualizar(Long id, UsuarioDtoIn dtoIn) {
         Usuario entity = repository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
 
+        if (repository.existsByEmailAndIdNot(dtoIn.getEmail(), id)) {
+            throw new RecursoDuplicadoException("El correo ya se encuentra registrado por otro usuario");
+        }
+
         entity.setNombre(dtoIn.getNombre());
         entity.setEmail(dtoIn.getEmail());
-        entity.setPassword(dtoIn.getPassword()); 
+        entity.setPassword(dtoIn.getPassword());
 
         repository.save(entity);
         return new IdDto(entity.getId(), "Usuario actualizado correctamente");
