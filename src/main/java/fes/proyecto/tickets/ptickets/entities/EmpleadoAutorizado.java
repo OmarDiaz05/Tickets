@@ -19,10 +19,10 @@ import lombok.Setter;
 public class EmpleadoAutorizado {
 
     @Id
-    @Column(name = "numero_empleado", length = 20)
+    @Column(name = "numero_empleado", length = 9)
     private String numeroEmpleado;
 
-    @Column(name = "nombre_completo", nullable = false, length = 100)
+    @Column(name = "nombre_completo", nullable = false, length = 50)
     private String nombreCompleto;
 
     @Column(nullable = false)
