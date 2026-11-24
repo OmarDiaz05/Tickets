@@ -109,15 +109,40 @@ class GlobalExceptionHandlerTest {
     @Test
     void manejarTipoArgumentoInvalido_RetornaHttp400() {
         MethodArgumentTypeMismatchException ex = new MethodArgumentTypeMismatchException(
-                "abc", Long.class, "id", mock(MethodParameter.class), new NumberFormatException("abc"));
+                "abc", int.class, "id", mock(MethodParameter.class), new NumberFormatException("abc"));
 
         ResponseEntity<ErrorDto> response = handler.manejarTipoArgumentoInvalido(ex);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(400, response.getBody().getStatus());
-        assertEquals("El parámetro 'id' debe ser de tipo Long", response.getBody().getMensaje());
+        assertEquals("El parámetro 'id' debe ser de tipo int", response.getBody().getMensaje());
         assertNotNull(response.getBody().getFechaHora());
+    }
+
+    @Test
+    void manejarSolicitudInvalida_RetornaHttp400() {
+        SolicitudInvalidaException ex = new SolicitudInvalidaException("Rol inválido. Debe ser CLIENTE o ADMIN");
+
+        ResponseEntity<ErrorDto> response = handler.manejarSolicitudInvalida(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().getStatus());
+        assertEquals("Rol inválido. Debe ser CLIENTE o ADMIN", response.getBody().getMensaje());
+        assertNotNull(response.getBody().getFechaHora());
+    }
+
+    @Test
+    void manejarReglaNegocio_NumeroEmpleadoYaUsado_RetornaHttp409() {
+        ReglaNegocioException ex = new ReglaNegocioException("Este número de empleado ya fue utilizado previamente");
+
+        ResponseEntity<ErrorDto> response = handler.manejarReglaNegocio(ex);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(409, response.getBody().getStatus());
+        assertEquals("Este número de empleado ya fue utilizado previamente", response.getBody().getMensaje());
     }
 
     @Test

@@ -1,15 +1,22 @@
 package fes.proyecto.tickets.ptickets.dtos;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Setter
+@Getter
 @AllArgsConstructor
+@NoArgsConstructor
 public class UsuarioDto {
-    private Long id;
+    private int id;
     private String nombre;
     private String email;
+    private String rol;
+    private String numeroEmpleado;
+    private boolean verificado;
     private LocalDateTime fechaRegistro;
-    private Boolean activo;
+    private boolean activo;
 }

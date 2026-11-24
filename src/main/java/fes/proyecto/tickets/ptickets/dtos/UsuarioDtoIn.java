@@ -1,29 +1,33 @@
 package fes.proyecto.tickets.ptickets.dtos;
 
-import fes.proyecto.tickets.ptickets.entities.Usuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Setter
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class UsuarioDtoIn {
+
     @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
 
-    @Email(message = "El correo debe tener un formato válido")
+    @Email(message = "El formato de correo no es válido")
     @NotBlank(message = "El correo es obligatorio")
     private String email;
 
     @NotBlank(message = "La contraseña es obligatoria")
     private String password;
 
-    // Conversión inversa: de DTO a Entidad
-    public Usuario toEntity() {
-        Usuario entity = new Usuario();
-        entity.setNombre(this.nombre);
-        entity.setEmail(this.email);
-        entity.setPassword(this.password);
-        entity.setActivo(true);
-        return entity;
-    }
+    @NotBlank(message = "El rol es obligatorio (CLIENTE o ADMIN)")
+    private String rol;
+
+    private String numeroEmpleado; // Requerido si rol = ADMIN
+
+    @NotBlank(message = "El guid es obligatorio")
+    private String guid;
 }

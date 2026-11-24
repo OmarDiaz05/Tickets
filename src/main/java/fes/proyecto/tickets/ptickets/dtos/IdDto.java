@@ -1,13 +1,15 @@
 package fes.proyecto.tickets.ptickets.dtos;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Setter
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 public class IdDto {
-    private long id;
+    private int id;
     private String mensaje;
 }

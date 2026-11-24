@@ -1,67 +1,142 @@
 package fes.proyecto.tickets.ptickets.businessLayer;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import fes.proyecto.tickets.ptickets.dtos.IdDto;
 import fes.proyecto.tickets.ptickets.dtos.UsuarioDto;
 import fes.proyecto.tickets.ptickets.dtos.UsuarioDtoIn;
+import fes.proyecto.tickets.ptickets.entities.NumeroEmpleado;
 import fes.proyecto.tickets.ptickets.entities.Usuario;
+import fes.proyecto.tickets.ptickets.exceptions.AccesoDenegadoException;
 import fes.proyecto.tickets.ptickets.exceptions.RecursoDuplicadoException;
 import fes.proyecto.tickets.ptickets.exceptions.RecursoNoEncontradoException;
+import fes.proyecto.tickets.ptickets.exceptions.ReglaNegocioException;
+import fes.proyecto.tickets.ptickets.exceptions.SolicitudInvalidaException;
+import fes.proyecto.tickets.ptickets.helpers.Mappers;
+import fes.proyecto.tickets.ptickets.repositories.INumeroEmpleadoRepository;
 import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class UsuarioBusinessLayer {
 
-    @Autowired
-    private IUsuarioRepository repository;
+    /**
+     * Resultado de un registro. {@code registroPrevio} es true cuando ya existía
+     * un usuario con el mismo guid (idempotencia): no se crea nada nuevo y se
+     * devuelve el id existente.
+     */
+    public record ResultadoRegistro(IdDto idDto, boolean registroPrevio) {
+    }
 
-    public IdDto agregar(UsuarioDtoIn dtoIn) {
-        if (repository.existsByEmail(dtoIn.getEmail())) {
-            throw new RecursoDuplicadoException("El correo ya se encuentra registrado");
-        }
-        Usuario entity = dtoIn.toEntity();
-        repository.save(entity);
-        return new IdDto(entity.getId(), "Usuario registrado con éxito");
+    private final IUsuarioRepository repository;
+    private final INumeroEmpleadoRepository numeroEmpleadoRepository;
+
+    public UsuarioBusinessLayer(
+            IUsuarioRepository repository,
+            INumeroEmpleadoRepository numeroEmpleadoRepository) {
+        this.repository = repository;
+        this.numeroEmpleadoRepository = numeroEmpleadoRepository;
     }
 
     public List<UsuarioDto> obtenerTodos() {
-        return repository.findByActivoTrue().stream()
-                .map(Usuario::toDto)
-                .collect(Collectors.toList());
+        List<UsuarioDto> usuarios = new ArrayList<>();
+        List<Usuario> entities = repository.findByActivoTrue();
+        for (Usuario entity : entities) {
+            usuarios.add(Mappers.toDto(entity));
+        }
+        return usuarios;
     }
 
-    public UsuarioDto obtenerPorId(Long id) {
-        return repository.findById(id)
-                .map(Usuario::toDto)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
+    @Transactional
+    public ResultadoRegistro agregar(UsuarioDtoIn dtoIn) {
+        // Idempotencia por GUID: misma solicitud repetida devuelve el usuario existente
+        Optional<Usuario> porGuid = repository.findByGuid(dtoIn.getGuid().trim());
+        if (porGuid.isPresent()) {
+            return new ResultadoRegistro(
+                    new IdDto(porGuid.get().getId(), "Usuario registrado previamente (GUID duplicado)"),
+                    true);
+        }
+
+        String email = dtoIn.getEmail().trim().toLowerCase();
+        if (repository.existsByEmail(email)) {
+            throw new RecursoDuplicadoException("El correo ya se encuentra registrado");
+        }
+
+        String rol = dtoIn.getRol().trim().toUpperCase();
+        if (!rol.equals("CLIENTE") && !rol.equals("ADMIN")) {
+            throw new SolicitudInvalidaException("Rol inválido. Debe ser CLIENTE o ADMIN");
+        }
+
+        NumeroEmpleado numEmpleadoAutorizado = null;
+
+        if (rol.equals("ADMIN")) {
+            if (dtoIn.getNumeroEmpleado() == null || dtoIn.getNumeroEmpleado().isBlank()) {
+                throw new SolicitudInvalidaException("El número de empleado es obligatorio para administradores");
+            }
+
+            String clave = dtoIn.getNumeroEmpleado().trim();
+            numEmpleadoAutorizado = numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue(clave)
+                    .orElseThrow(() -> new AccesoDenegadoException("Número de empleado no autorizado o inactivo"));
+
+            if (numEmpleadoAutorizado.isUsado()) {
+                throw new ReglaNegocioException("Este número de empleado ya fue utilizado previamente");
+            }
+        }
+
+        Usuario entity = Mappers.toEntity(dtoIn);
+        Usuario guardado = repository.save(entity);
+
+        // Marcar el número de empleado como usado (un solo uso)
+        if (numEmpleadoAutorizado != null) {
+            numEmpleadoAutorizado.setUsado(true);
+            numeroEmpleadoRepository.save(numEmpleadoAutorizado);
+        }
+
+        return new ResultadoRegistro(new IdDto(guardado.getId(), "Usuario registrado con éxito"), false);
     }
 
-    public IdDto actualizar(Long id, UsuarioDtoIn dtoIn) {
-        Usuario entity = repository.findById(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
+    public UsuarioDto obtenerPorId(int id) {
+        return Mappers.toDto(buscarPorId(id));
+    }
 
-        if (repository.existsByEmailAndIdNot(dtoIn.getEmail(), id)) {
+    public IdDto actualizar(int id, UsuarioDtoIn dtoIn) {
+        Usuario entity = buscarPorId(id);
+
+        String email = dtoIn.getEmail().trim().toLowerCase();
+        if (repository.existsByEmailAndIdNot(email, id)) {
             throw new RecursoDuplicadoException("El correo ya se encuentra registrado por otro usuario");
         }
 
-        entity.setNombre(dtoIn.getNombre());
-        entity.setEmail(dtoIn.getEmail());
+        entity.setNombre(dtoIn.getNombre().trim());
+        entity.setEmail(email);
         entity.setPassword(dtoIn.getPassword());
-
         repository.save(entity);
+
         return new IdDto(entity.getId(), "Usuario actualizado correctamente");
     }
 
-    public IdDto deshabilitar(Long id) {
-        Usuario entity = repository.findById(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
+    public IdDto borrar(int id) {
+        Usuario entity = buscarPorId(id);
         entity.setActivo(false);
         repository.save(entity);
-        return new IdDto(id, "Usuario deshabilitado correctamente");
+
+        return new IdDto(entity.getId(), "Usuario deshabilitado correctamente");
+    }
+
+    public IdDto activar(int id) {
+        Usuario entity = buscarPorId(id);
+        entity.setActivo(true);
+        repository.save(entity);
+
+        return new IdDto(entity.getId(), "Usuario reactivado correctamente");
+    }
+
+    private Usuario buscarPorId(int id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
     }
 }

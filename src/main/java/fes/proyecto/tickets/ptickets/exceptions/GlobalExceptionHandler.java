@@ -46,6 +46,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(SolicitudInvalidaException.class)
+    public ResponseEntity<ErrorDto> manejarSolicitudInvalida(SolicitudInvalidaException ex) {
+        ErrorDto error = new ErrorDto(HttpStatus.BAD_REQUEST.value(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     @ExceptionHandler(RecursoNoEncontradoException.class)
     public ResponseEntity<ErrorDto> manejarNoEncontrado(RecursoNoEncontradoException ex) {
         ErrorDto error = new ErrorDto(HttpStatus.NOT_FOUND.value(), ex.getMessage());
