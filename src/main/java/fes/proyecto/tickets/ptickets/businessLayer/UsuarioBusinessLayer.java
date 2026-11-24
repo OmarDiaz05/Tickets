@@ -12,12 +12,25 @@ import fes.proyecto.tickets.ptickets.dtos.UsuarioDto;
 import fes.proyecto.tickets.ptickets.dtos.UsuarioDtoIn;
 import fes.proyecto.tickets.ptickets.entities.NumeroEmpleado;
 import fes.proyecto.tickets.ptickets.entities.Usuario;
+import fes.proyecto.tickets.ptickets.exceptions.AccesoDenegadoException;
+import fes.proyecto.tickets.ptickets.exceptions.RecursoDuplicadoException;
+import fes.proyecto.tickets.ptickets.exceptions.RecursoNoEncontradoException;
+import fes.proyecto.tickets.ptickets.exceptions.ReglaNegocioException;
+import fes.proyecto.tickets.ptickets.exceptions.SolicitudInvalidaException;
 import fes.proyecto.tickets.ptickets.helpers.Mappers;
 import fes.proyecto.tickets.ptickets.repositories.INumeroEmpleadoRepository;
 import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
 
 @Service
 public class UsuarioBusinessLayer {
+
+    /**
+     * Resultado de un registro. {@code registroPrevio} es true cuando ya existía
+     * un usuario con el mismo guid (idempotencia): no se crea nada nuevo y se
+     * devuelve el id existente.
+     */
+    public record ResultadoRegistro(IdDto idDto, boolean registroPrevio) {
+    }
 
     private final IUsuarioRepository repository;
     private final INumeroEmpleadoRepository numeroEmpleadoRepository;
@@ -39,30 +52,39 @@ public class UsuarioBusinessLayer {
     }
 
     @Transactional
-    public IdDto agregar(UsuarioDtoIn dtoIn) {
+    public ResultadoRegistro agregar(UsuarioDtoIn dtoIn) {
+        // Idempotencia por GUID: misma solicitud repetida devuelve el usuario existente
+        Optional<Usuario> porGuid = repository.findByGuid(dtoIn.getGuid().trim());
+        if (porGuid.isPresent()) {
+            return new ResultadoRegistro(
+                    new IdDto(porGuid.get().getId(), "Usuario registrado previamente (GUID duplicado)"),
+                    true);
+        }
+
+        String email = dtoIn.getEmail().trim().toLowerCase();
+        if (repository.existsByEmail(email)) {
+            throw new RecursoDuplicadoException("El correo ya se encuentra registrado");
+        }
+
         String rol = dtoIn.getRol().trim().toUpperCase();
         if (!rol.equals("CLIENTE") && !rol.equals("ADMIN")) {
-            return new IdDto(0, "Rol inválido. Debe ser CLIENTE o ADMIN");
+            throw new SolicitudInvalidaException("Rol inválido. Debe ser CLIENTE o ADMIN");
         }
 
         NumeroEmpleado numEmpleadoAutorizado = null;
 
         if (rol.equals("ADMIN")) {
             if (dtoIn.getNumeroEmpleado() == null || dtoIn.getNumeroEmpleado().isBlank()) {
-                return new IdDto(0, "El número de empleado es obligatorio para administradores");
+                throw new SolicitudInvalidaException("El número de empleado es obligatorio para administradores");
             }
 
             String clave = dtoIn.getNumeroEmpleado().trim();
-            Optional<NumeroEmpleado> numOpt = numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue(clave);
+            numEmpleadoAutorizado = numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue(clave)
+                    .orElseThrow(() -> new AccesoDenegadoException("Número de empleado no autorizado o inactivo"));
 
-            if (numOpt.isEmpty()) {
-                return new IdDto(0, "Número de empleado no autorizado o inactivo");
+            if (numEmpleadoAutorizado.isUsado()) {
+                throw new ReglaNegocioException("Este número de empleado ya fue utilizado previamente");
             }
-            if (numOpt.get().isUsado()) {
-                return new IdDto(0, "Este número de empleado ya fue utilizado previamente");
-            }
-
-            numEmpleadoAutorizado = numOpt.get();
         }
 
         Usuario entity = Mappers.toEntity(dtoIn);
@@ -74,32 +96,23 @@ public class UsuarioBusinessLayer {
             numeroEmpleadoRepository.save(numEmpleadoAutorizado);
         }
 
-        return new IdDto(guardado.getId(), "Usuario registrado con éxito");
+        return new ResultadoRegistro(new IdDto(guardado.getId(), "Usuario registrado con éxito"), false);
     }
 
     public UsuarioDto obtenerPorId(int id) {
-        Usuario entity = repository.findById(id).orElse(null);
-        return Mappers.toDto(entity);
-    }
-
-    public UsuarioDto obtenerPorGuid(String guid) {
-        Optional<Usuario> usuarioOpt = repository.findByGuid(guid);
-        return usuarioOpt.map(Mappers::toDto).orElse(null);
-    }
-
-    public UsuarioDto obtenerPorEmail(String email) {
-        Optional<Usuario> usuarioOpt = repository.findByEmail(email.trim().toLowerCase());
-        return usuarioOpt.map(Mappers::toDto).orElse(null);
+        return Mappers.toDto(buscarPorId(id));
     }
 
     public IdDto actualizar(int id, UsuarioDtoIn dtoIn) {
-        Optional<Usuario> usuarioOpt = repository.findById(id);
-        if (usuarioOpt.isEmpty()) {
-            return null;
+        Usuario entity = buscarPorId(id);
+
+        String email = dtoIn.getEmail().trim().toLowerCase();
+        if (repository.existsByEmailAndIdNot(email, id)) {
+            throw new RecursoDuplicadoException("El correo ya se encuentra registrado por otro usuario");
         }
-        Usuario entity = usuarioOpt.get();
+
         entity.setNombre(dtoIn.getNombre().trim());
-        entity.setEmail(dtoIn.getEmail().trim().toLowerCase());
+        entity.setEmail(email);
         entity.setPassword(dtoIn.getPassword());
         repository.save(entity);
 
@@ -107,11 +120,7 @@ public class UsuarioBusinessLayer {
     }
 
     public IdDto borrar(int id) {
-        Optional<Usuario> usuarioOpt = repository.findById(id);
-        if (usuarioOpt.isEmpty()) {
-            return null;
-        }
-        Usuario entity = usuarioOpt.get();
+        Usuario entity = buscarPorId(id);
         entity.setActivo(false);
         repository.save(entity);
 
@@ -119,14 +128,15 @@ public class UsuarioBusinessLayer {
     }
 
     public IdDto activar(int id) {
-        Optional<Usuario> usuarioOpt = repository.findById(id);
-        if (usuarioOpt.isEmpty()) {
-            return null;
-        }
-        Usuario entity = usuarioOpt.get();
+        Usuario entity = buscarPorId(id);
         entity.setActivo(true);
         repository.save(entity);
 
         return new IdDto(entity.getId(), "Usuario reactivado correctamente");
+    }
+
+    private Usuario buscarPorId(int id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id " + id));
     }
 }

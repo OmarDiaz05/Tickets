@@ -6,7 +6,7 @@ import lombok.*;
 @Setter @Getter @AllArgsConstructor @NoArgsConstructor
 @Entity
 @Table(name = "estados_ticket")
-public class Estadoticket {
+public class EstadoTicket {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;

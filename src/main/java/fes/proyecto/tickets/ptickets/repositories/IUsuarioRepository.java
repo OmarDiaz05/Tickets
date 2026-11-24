@@ -8,6 +8,8 @@ import fes.proyecto.tickets.ptickets.entities.Usuario;
 public interface IUsuarioRepository extends JpaRepository<Usuario, Integer> {
     Optional<Usuario> findByGuid(String guid);
     Optional<Usuario> findByEmail(String email);
+    boolean existsByEmail(String email);
+    boolean existsByEmailAndIdNot(String email, int id);
     List<Usuario> findByActivoTrue();
     List<Usuario> findByRolAndActivoTrueAndVerificadoTrue(String rol);
 }
