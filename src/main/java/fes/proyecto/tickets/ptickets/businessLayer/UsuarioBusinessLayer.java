@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,12 +35,15 @@ public class UsuarioBusinessLayer {
 
     private final IUsuarioRepository repository;
     private final INumeroEmpleadoRepository numeroEmpleadoRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UsuarioBusinessLayer(
             IUsuarioRepository repository,
-            INumeroEmpleadoRepository numeroEmpleadoRepository) {
+            INumeroEmpleadoRepository numeroEmpleadoRepository,
+            PasswordEncoder passwordEncoder) {
         this.repository = repository;
         this.numeroEmpleadoRepository = numeroEmpleadoRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<UsuarioDto> obtenerTodos() {
@@ -87,7 +91,7 @@ public class UsuarioBusinessLayer {
             }
         }
 
-        Usuario entity = Mappers.toEntity(dtoIn);
+        Usuario entity = Mappers.toEntity(dtoIn, codificarPassword(dtoIn.getPassword()));
         Usuario guardado = repository.save(entity);
 
         // Marcar el número de empleado como usado (un solo uso)
@@ -113,7 +117,7 @@ public class UsuarioBusinessLayer {
 
         entity.setNombre(dtoIn.getNombre().trim());
         entity.setEmail(email);
-        entity.setPassword(dtoIn.getPassword());
+        entity.setPassword(codificarPassword(dtoIn.getPassword()));
         repository.save(entity);
 
         return new IdDto(entity.getId(), "Usuario actualizado correctamente");
@@ -133,6 +137,18 @@ public class UsuarioBusinessLayer {
         repository.save(entity);
 
         return new IdDto(entity.getId(), "Usuario reactivado correctamente");
+    }
+
+    /**
+     * Devuelve el hash BCrypt de la contraseña. BCrypt solo admite hasta 72 bytes
+     * y en ese caso el encoder lanza IllegalArgumentException; se responde 400.
+     */
+    private String codificarPassword(String password) {
+        try {
+            return passwordEncoder.encode(password);
+        } catch (IllegalArgumentException ex) {
+            throw new SolicitudInvalidaException("La contraseña no puede exceder 72 bytes");
+        }
     }
 
     private Usuario buscarPorId(int id) {

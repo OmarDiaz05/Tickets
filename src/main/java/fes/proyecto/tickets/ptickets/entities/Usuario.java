@@ -30,8 +30,8 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 50)
     private String email;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(nullable = false, length = 100)
+    private String password; // hash BCrypt, nunca texto plano
 
     @Column(nullable = false, length = 20)
     private String rol; // ya sea cliente o admin
