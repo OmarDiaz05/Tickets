@@ -16,9 +16,13 @@ import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -37,6 +41,10 @@ class UsuarioBusinessLayerTest {
 
     @Mock
     private INumeroEmpleadoRepository numeroEmpleadoRepository;
+
+    // Encoder real (costo bajo para que las pruebas sean rápidas)
+    @Spy
+    private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
 
     @InjectMocks
     private UsuarioBusinessLayer businessLayer;
@@ -97,6 +105,33 @@ class UsuarioBusinessLayerTest {
         assertFalse(resultado.registroPrevio());
         assertEquals(1, resultado.idDto().getId());
         verify(repository, times(1)).save(any(Usuario.class));
+    }
+
+    @Test
+    void agregar_GuardaPasswordConHashBCryptNoTextoPlano() {
+        when(repository.findByGuid(GUID)).thenReturn(Optional.empty());
+        when(repository.existsByEmail("juan@example.com")).thenReturn(false);
+        when(repository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        businessLayer.agregar(dtoIn);
+
+        ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
+        verify(repository).save(captor.capture());
+        String guardada = captor.getValue().getPassword();
+        assertNotEquals("123456", guardada);
+        assertTrue(guardada.startsWith("$2"), "Debe ser un hash BCrypt");
+        assertTrue(guardada.length() <= 100, "Debe caber en la columna password");
+        assertTrue(passwordEncoder.matches("123456", guardada));
+    }
+
+    @Test
+    void agregar_PasswordMayorA72Bytes_LanzaSolicitudInvalida() {
+        dtoIn.setPassword("x".repeat(73));
+        when(repository.findByGuid(GUID)).thenReturn(Optional.empty());
+        when(repository.existsByEmail("juan@example.com")).thenReturn(false);
+
+        assertThrows(SolicitudInvalidaException.class, () -> businessLayer.agregar(dtoIn));
+        verify(repository, never()).save(any(Usuario.class));
     }
 
     @Test
@@ -220,6 +255,19 @@ class UsuarioBusinessLayerTest {
         assertNotNull(respuesta);
         assertEquals(1, respuesta.getId());
         verify(repository, times(1)).save(usuarioExistente);
+    }
+
+    @Test
+    void actualizar_GuardaPasswordConHashBCrypt() {
+        dtoIn.setPassword("nuevaClave789");
+        when(repository.findById(1)).thenReturn(Optional.of(usuarioExistente));
+        when(repository.existsByEmailAndIdNot("juan@example.com", 1)).thenReturn(false);
+        when(repository.save(any(Usuario.class))).thenReturn(usuarioExistente);
+
+        businessLayer.actualizar(1, dtoIn);
+
+        assertNotEquals("nuevaClave789", usuarioExistente.getPassword());
+        assertTrue(passwordEncoder.matches("nuevaClave789", usuarioExistente.getPassword()));
     }
 
     @Test

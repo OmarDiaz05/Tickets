@@ -23,7 +23,11 @@ public class Mappers {
         );
     }
 
-    public static Usuario toEntity(UsuarioDtoIn dtoIn) {
+    /**
+     * @param passwordHash contraseña ya codificada con el PasswordEncoder;
+     *                     la contraseña en texto plano del dtoIn no se copia.
+     */
+    public static Usuario toEntity(UsuarioDtoIn dtoIn, String passwordHash) {
         if (dtoIn == null) {
             return null;
         }
@@ -33,7 +37,7 @@ public class Mappers {
         Usuario entity = new Usuario();
         entity.setNombre(dtoIn.getNombre().trim());
         entity.setEmail(dtoIn.getEmail().trim().toLowerCase());
-        entity.setPassword(dtoIn.getPassword());
+        entity.setPassword(passwordHash);
         entity.setRol(rolNormalizado);
         entity.setNumeroEmpleado(numEmpleado);
         entity.setVerificado(false);
