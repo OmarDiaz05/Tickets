@@ -6,6 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -18,8 +19,10 @@ import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
  * Apartado 4.6 — Carga de datos de prueba al arrancar la aplicación:
  * - Lista de números de empleado autorizados para el registro de administradores (de un solo uso).
  * - Usuarios de prueba fijos (cliente y administrador) para reproducibilidad de reportes y pruebas.
+ * - Restringido a entornos que no sean de producción (!prod).
  */
 @Component
+@Profile("!prod")
 public class DataInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);

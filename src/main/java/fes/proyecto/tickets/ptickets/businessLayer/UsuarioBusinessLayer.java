@@ -108,6 +108,17 @@ public class UsuarioBusinessLayer {
     }
 
     public IdDto actualizar(int id, UsuarioDtoIn dtoIn) {
+        // Restricción de seguridad: un CLIENTE solo puede modificar su propia información; un ADMIN puede modificar a cualquiera
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof fes.proyecto.tickets.ptickets.security.UsuarioAutenticado usuarioLogueado) {
+            boolean esAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            if (!esAdmin && usuarioLogueado.getId() != id) {
+                throw new AccesoDenegadoException("No tienes permiso para modificar la información de otro usuario");
+            }
+        }
+
         Usuario entity = buscarPorId(id);
 
         String email = dtoIn.getEmail().trim().toLowerCase();
