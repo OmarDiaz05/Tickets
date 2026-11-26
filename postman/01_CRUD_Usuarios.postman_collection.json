@@ -20,6 +20,16 @@
       "key": "adminId",
       "value": "2",
       "type": "string"
+    },
+    {
+      "key": "ticketGuid",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticketId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -451,6 +461,207 @@
         "description": "Verifica que el usuario borrado lógicamente ya no figure en la lista de activos, mientras que el admin sigue activo."
       },
       "response": []
+    },
+    {
+      "name": "10. Tickets - Crear Ticket (Punto 5.2)",
+      "description": "Requiere la app con el perfil distinto de prod (DataInitializer crea el cliente fijo y los catálogos). Ejecutar en orden: login del cliente, crear ticket y repetir el guid.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Spring Security exige el token CSRF en POST: se copia la cookie XSRF-TOKEN a la cabecera X-XSRF-TOKEN",
+              "const token = pm.cookies.get(\"XSRF-TOKEN\");",
+              "if (token) {",
+              "    pm.request.headers.upsert({ key: \"X-XSRF-TOKEN\", value: token });",
+              "} else {",
+              "    // Primera petición: se obtiene la cookie con una petición pública",
+              "    pm.sendRequest(pm.variables.replaceIn(\"{{baseUrl}}/v3/api-docs\"), function (err, res) {",
+              "        const nuevo = res && res.cookies.get(\"XSRF-TOKEN\");",
+              "        if (nuevo) {",
+              "            pm.request.headers.upsert({ key: \"X-XSRF-TOKEN\", value: nuevo });",
+              "        }",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "10.1 Login Cliente Fijo (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Inicio de sesión exitoso\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.mensaje).to.eql(\"Inicio de sesión exitoso\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "cliente.fijo@aragon.unam.mx",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "Password123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            },
+            "description": "Inicia sesión con el cliente fijo de DataInitializer. Postman guarda la cookie JSESSIONID para las siguientes peticiones."
+          },
+          "response": []
+        },
+        {
+          "name": "10.2 Crear Ticket (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// GUID nuevo por ejecución; la petición 10.3 lo reutiliza para probar la idempotencia",
+                  "pm.collectionVariables.set(\"ticketGuid\", pm.variables.replaceIn(\"{{$guid}}\"));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta contiene ID y folio con formato FESA-<año>-<consecutivo>\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"id\");",
+                  "    pm.expect(jsonData.mensaje).to.match(/^Ticket FESA-\\d{4}-[0-9A-Z]{3,} creado$/);",
+                  "    pm.collectionVariables.set(\"ticketId\", jsonData.id.toString());",
+                  "    console.log(\"Variable ticketId guardada: \" + jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": 1,\n  \"prioridadId\": 2,\n  \"descripcion\": \"Sin acceso a internet en el laboratorio de cómputo\",\n  \"desdeCuando\": \"2026-11-25T08:00:00\",\n  \"areaAfectada\": \"Laboratorio de cómputo\",\n  \"servicioImpactado\": \"Internet\",\n  \"medioTransmision\": \"Cable UTP\",\n  \"guid\": \"{{ticketGuid}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ]
+            },
+            "description": "Crea un ticket como el cliente de la sesión. El folio, el estado Abierto, la fecha y el administrador asignado los pone el sistema."
+          },
+          "response": []
+        },
+        {
+          "name": "10.3 Repetir GUID del Ticket (208)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 208 Already Reported\", function () {",
+                  "    pm.response.to.have.status(208);",
+                  "});",
+                  "",
+                  "pm.test(\"Devuelve el mismo ticket sin crear uno nuevo\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id.toString()).to.eql(pm.collectionVariables.get(\"ticketId\"));",
+                  "    pm.expect(jsonData.mensaje).to.include(\"registrado previamente\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": 1,\n  \"prioridadId\": 2,\n  \"descripcion\": \"Sin acceso a internet en el laboratorio de cómputo\",\n  \"desdeCuando\": \"2026-11-25T08:00:00\",\n  \"areaAfectada\": \"Laboratorio de cómputo\",\n  \"servicioImpactado\": \"Internet\",\n  \"medioTransmision\": \"Cable UTP\",\n  \"guid\": \"{{ticketGuid}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ]
+            },
+            "description": "Reenvía el ticket con el mismo guid de la petición 10.2: debe responder 208 con el ID existente."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

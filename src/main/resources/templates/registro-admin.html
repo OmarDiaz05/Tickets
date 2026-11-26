@@ -45,8 +45,8 @@
 
                     <div class="mb-4">
                         <label class="form-label">Contraseña</label>
-                        <input type="password" class="form-control" th:field="*{password}" required>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}" placeholder="minimo 6 caracteres"></div>
+                        <input type="password" class="form-control" th:field="*{password}" placeholder="Mínimo 6 caracteres" minlength="6" required>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
                     </div>
 
                     <button type="submit" class="btn btn-primario w-100 fw-semibold">Registrarme como Administrador</button>

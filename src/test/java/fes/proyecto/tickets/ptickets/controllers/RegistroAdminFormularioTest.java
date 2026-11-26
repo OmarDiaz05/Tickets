@@ -64,4 +64,22 @@ class RegistroAdminFormularioTest {
 
         verify(usuarioBusinessLayer, never()).agregar(any());
     }
+
+    @Test
+    void registroAdmin_PasswordMenorA6Caracteres_MuestraMensajeEnElFormulario() throws Exception {
+        mockMvc.perform(post("/registro/admin")
+                        .param("numeroEmpleado", "100000001")
+                        .param("nombre", "Ing. Carlos Ruiz")
+                        .param("email", "carlos.admin@example.com")
+                        .param("password", "12345")
+                        .param("rol", "ADMIN")
+                        .param("guid", "guid-form-002")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("registro-admin"))
+                .andExpect(model().attributeHasFieldErrors("usuario", "password"))
+                .andExpect(content().string(containsString("La contraseña debe tener al menos 6 caracteres")));
+
+        verify(usuarioBusinessLayer, never()).agregar(any());
+    }
 }

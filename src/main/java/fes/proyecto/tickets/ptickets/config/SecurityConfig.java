@@ -66,6 +66,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/usuarios", "/api/v1/usuarios/*").hasAnyRole("ADMIN", "CLIENTE")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/usuarios/*").hasAnyRole("ADMIN", "CLIENTE")
 
+                // Punto 5.2 - Solo los clientes levantan tickets
+                .requestMatchers(HttpMethod.POST, "/api/v1/tickets").hasRole("CLIENTE")
+
                 .anyRequest().authenticated())
 
             .csrf(csrf -> csrf
