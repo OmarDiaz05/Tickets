@@ -46,11 +46,27 @@ public class SecurityConfig {
 
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/v1/usuarios").permitAll()
-                .requestMatchers("/login").permitAll()
+                // Documentación interactiva de Swagger y OpenAPI
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                // Permite que Spring Boot muestre su página de error en lugar de responder 401
+
+                // Registro público de usuarios (abierto a CLIENTE y a ADMIN con validación de número de empleado)
+                .requestMatchers(HttpMethod.POST, "/api/v1/usuarios").permitAll()
+
+                // Endpoint de inicio de sesión y gestión de errores de Spring Boot
+                .requestMatchers("/login").permitAll()
                 .requestMatchers("/error").permitAll()
+
+                // Apartado 4.3 - Permisos por rol:
+                // Solo el rol ADMIN puede deshabilitar (borrado lógico) o reactivar usuarios
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/usuarios/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/api/v1/usuarios/*/activar").hasRole("ADMIN")
+
+                // Consulta y actualización disponibles para usuarios autenticados (ADMIN y CLIENTE)
+                .requestMatchers(HttpMethod.GET, "/api/v1/usuarios", "/api/v1/usuarios/*").hasAnyRole("ADMIN", "CLIENTE")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/usuarios/*").hasAnyRole("ADMIN", "CLIENTE")
+
+                // Fase 5 (Tickets - reglas preparadas):
+                // El cliente solo ve y modifica sus propios tickets; los administradores ven todos.
                 .anyRequest().authenticated())
 
             .csrf(csrf -> csrf
