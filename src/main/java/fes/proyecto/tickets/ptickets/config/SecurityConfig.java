@@ -9,10 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.savedrequest.NullRequestCache;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import fes.proyecto.tickets.ptickets.dtos.ErrorDto;
 import fes.proyecto.tickets.ptickets.dtos.IdDto;
@@ -25,13 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Autenticación por sesión de servidor (cookie JSESSIONID), sin JWT.
- *
- * Flujo para clientes como Postman o K6:
- * 1. Cualquier petición devuelve la cookie XSRF-TOKEN (si aún no se tiene).
- * 2. Las peticiones POST/PUT/PATCH/DELETE (incluidos /login y /logout) deben
- *    enviar ese valor en la cabecera X-XSRF-TOKEN.
- * 3. POST /login (username = email, password) crea la sesión y renueva la
- *    cookie XSRF-TOKEN.
+ * Soporta tanto vistas Thymeleaf (navegador) como API REST (Postman/Swagger).
  */
 @Configuration
 @EnableWebSecurity
@@ -44,29 +40,32 @@ public class SecurityConfig {
             AccesoDenegadoHandler accesoDenegadoHandler,
             RespuestaJson respuestaJson) throws Exception {
 
+        RequestMatcher esPeticionHtml = request -> {
+            String accept = request.getHeader("Accept");
+            return accept != null && accept.contains("text/html") && !request.getRequestURI().startsWith("/api/");
+        };
+
         http
             .authorizeHttpRequests(auth -> auth
                 // Documentación interactiva de Swagger y OpenAPI
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
 
-                // Registro público de usuarios (abierto a CLIENTE y a ADMIN con validación de número de empleado)
+                // Pantallas públicas de login, registro y recursos estáticos (Puntos 4.8 y 4.9)
+                .requestMatchers("/", "/login", "/registro/**", "/css/**", "/js/**", "/images/**", "/error").permitAll()
+
+                // Registro público de usuarios por API
                 .requestMatchers(HttpMethod.POST, "/api/v1/usuarios").permitAll()
 
-                // Endpoint de inicio de sesión y gestión de errores de Spring Boot
-                .requestMatchers("/login").permitAll()
-                .requestMatchers("/error").permitAll()
+                // Vistas protegidas por rol (Punto 4.10)
+                .requestMatchers("/cliente/**").hasRole("CLIENTE")
+                .requestMatchers("/admin/**").hasRole("ADMIN")
 
-                // Apartado 4.3 - Permisos por rol:
-                // Solo el rol ADMIN puede deshabilitar (borrado lógico) o reactivar usuarios
+                // Apartado 4.3 - Permisos por rol en API:
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/usuarios/*").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/usuarios/*/activar").hasRole("ADMIN")
-
-                // Consulta y actualización disponibles para usuarios autenticados (ADMIN y CLIENTE)
                 .requestMatchers(HttpMethod.GET, "/api/v1/usuarios", "/api/v1/usuarios/*").hasAnyRole("ADMIN", "CLIENTE")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/usuarios/*").hasAnyRole("ADMIN", "CLIENTE")
 
-                // Fase 5 (Tickets - reglas preparadas):
-                // El cliente solo ve y modifica sus propios tickets; los administradores ven todos.
                 .anyRequest().authenticated())
 
             .csrf(csrf -> csrf
@@ -74,19 +73,29 @@ public class SecurityConfig {
                 .csrfTokenRequestHandler(new CsrfTokenEnCookieRequestHandler()))
 
             .formLogin(form -> form
+                .loginPage("/login")
                 .loginProcessingUrl("/login")
                 .usernameParameter("username")
                 .passwordParameter("password")
                 .successHandler((request, response, authentication) -> {
                     UsuarioAutenticado usuario = (UsuarioAutenticado) authentication.getPrincipal();
-                    respuestaJson.escribir(response, HttpStatus.OK,
-                            new IdDto(usuario.getId(), "Inicio de sesión exitoso"));
+                    if (esPeticionHtml.matches(request)) {
+                        boolean esAdmin = authentication.getAuthorities().stream()
+                                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+                        response.sendRedirect(esAdmin ? "/admin/panel" : "/cliente/tickets");
+                    } else {
+                        respuestaJson.escribir(response, HttpStatus.OK,
+                                new IdDto(usuario.getId(), "Inicio de sesión exitoso"));
+                    }
                 })
-                // Mismo mensaje para correo inexistente, contraseña incorrecta o usuario
-                // desactivado, para no revelar qué cuentas existen
-                .failureHandler((request, response, exception) -> respuestaJson.escribir(response,
-                        HttpStatus.UNAUTHORIZED,
-                        new ErrorDto(HttpStatus.UNAUTHORIZED.value(), "Correo o contraseña incorrectos"))))
+                .failureHandler((request, response, exception) -> {
+                    if (esPeticionHtml.matches(request)) {
+                        response.sendRedirect("/login?error=true");
+                    } else {
+                        respuestaJson.escribir(response, HttpStatus.UNAUTHORIZED,
+                                new ErrorDto(HttpStatus.UNAUTHORIZED.value(), "Correo o contraseña incorrectos"));
+                    }
+                }))
 
             .logout(logout -> logout
                 .logoutUrl("/logout")
@@ -94,29 +103,27 @@ public class SecurityConfig {
                 .clearAuthentication(true)
                 .deleteCookies("JSESSIONID")
                 .logoutSuccessHandler((request, response, authentication) -> {
-                    int id = authentication != null && authentication.getPrincipal() instanceof UsuarioAutenticado u
-                            ? u.getId() : 0;
-                    respuestaJson.escribir(response, HttpStatus.OK, new IdDto(id, "Sesión cerrada correctamente"));
+                    if (esPeticionHtml.matches(request)) {
+                        response.sendRedirect("/login?logout=true");
+                    } else {
+                        int id = authentication != null && authentication.getPrincipal() instanceof UsuarioAutenticado u
+                                ? u.getId() : 0;
+                        respuestaJson.escribir(response, HttpStatus.OK, new IdDto(id, "Sesión cerrada correctamente"));
+                    }
                 }))
 
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(noAutenticadoEntryPoint)
+                .defaultAuthenticationEntryPointFor(
+                        new LoginUrlAuthenticationEntryPoint("/login"), esPeticionHtml)
+                .defaultAuthenticationEntryPointFor(
+                        noAutenticadoEntryPoint, request -> true)
                 .accessDeniedHandler(accesoDenegadoHandler))
 
-            // API REST: no se guarda la petición original para redirigir tras el login
-            // (evita crear sesiones para peticiones anónimas)
             .requestCache(cache -> cache.requestCache(new NullRequestCache()));
 
         return http.build();
     }
 
-    /**
-     * Acepta el token CSRF tal cual viene en la cookie XSRF-TOKEN (sin la máscara
-     * XOR que Spring usa por defecto) y lo genera en cada petición en que haga falta,
-     * para que la cookie siempre esté disponible. Al iniciar sesión Spring
-     * Security renueva el token y esta clase escribe la cookie nueva en la
-     * misma respuesta del login.
-     */
     static final class CsrfTokenEnCookieRequestHandler extends CsrfTokenRequestAttributeHandler {
         @Override
         public void handle(HttpServletRequest request, HttpServletResponse response,

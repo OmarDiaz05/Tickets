@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Panel de Administrador')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar(${nombreUsuario}, ${rolUsuario})}"></nav>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 fw-bold m-0">Panel de Administración de Tickets</h1>
+        <a th:href="@{/swagger-ui/index.html}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            Abrir Swagger API
+        </a>
+    </div>
+
+    <div class="card card-auth p-4 text-center text-muted">
+        <p class="mb-1">No hay tickets asignados por el momento.</p>
+        <small>Aquí se mostrarán los reportes asignados, filtros por estado y bitácora técnica.</small>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>
