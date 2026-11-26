@@ -10,9 +10,17 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import fes.proyecto.tickets.ptickets.entities.CategoriaFalla;
+import fes.proyecto.tickets.ptickets.entities.EstadoTicket;
 import fes.proyecto.tickets.ptickets.entities.NumeroEmpleado;
+import fes.proyecto.tickets.ptickets.entities.Prioridad;
+import fes.proyecto.tickets.ptickets.entities.Rol;
 import fes.proyecto.tickets.ptickets.entities.Usuario;
+import fes.proyecto.tickets.ptickets.repositories.ICategoriaFallaRepository;
+import fes.proyecto.tickets.ptickets.repositories.IEstadoTicketRepository;
 import fes.proyecto.tickets.ptickets.repositories.INumeroEmpleadoRepository;
+import fes.proyecto.tickets.ptickets.repositories.IPrioridadRepository;
+import fes.proyecto.tickets.ptickets.repositories.IRolRepository;
 import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
 
 /**
@@ -26,15 +34,27 @@ import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
 public class DataInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
-
+    private final IRolRepository rolRepository;
+    private final IEstadoTicketRepository estadoTicketRepository;
+    private final IPrioridadRepository prioridadRepository;
+    private final ICategoriaFallaRepository categoriaFallaRepository;
     private final INumeroEmpleadoRepository numeroEmpleadoRepository;
     private final IUsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    
 
     public DataInitializer(
+            IRolRepository rolRepository,
+            IEstadoTicketRepository estadoTicketRepository,
+            IPrioridadRepository prioridadRepository,
+            ICategoriaFallaRepository categoriaFallaRepository,
             INumeroEmpleadoRepository numeroEmpleadoRepository,
             IUsuarioRepository usuarioRepository,
             PasswordEncoder passwordEncoder) {
+        this.rolRepository = rolRepository;
+        this.estadoTicketRepository = estadoTicketRepository;
+        this.prioridadRepository = prioridadRepository;
+        this.categoriaFallaRepository = categoriaFallaRepository;
         this.numeroEmpleadoRepository = numeroEmpleadoRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
@@ -43,12 +63,56 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
+            cargarCatalogosIniciales();
             cargarNumerosEmpleadoPrueba();
             cargarUsuariosPruebaFijos();
         } catch (Exception ex) {
             log.warn("No fue posible inicializar los datos de prueba en la base de datos: {}", ex.getMessage());
         }
     }
+    private void cargarCatalogosIniciales() { 
+        if (rolRepository.count() == 0) {
+            rolRepository.saveAll(List.of(
+                    new Rol(0, "Cliente"),
+                    new Rol(0, "Administrador")
+            ));
+            log.info("Catálogo 'roles' inicializado.");
+        }
+
+        if (estadoTicketRepository.count() == 0) {
+            estadoTicketRepository.saveAll(List.of(
+                    new EstadoTicket(0, "Abierto", 1),
+                    new EstadoTicket(0, "Registrado", 2),
+                    new EstadoTicket(0, "En proceso", 3),
+                    new EstadoTicket(0, "En pausa", 4),
+                    new EstadoTicket(0, "Resuelto", 5),
+                    new EstadoTicket(0, "Cerrado", 6)
+            ));
+            log.info("Catálogo 'estados_ticket' inicializado.");
+        }
+
+        if (prioridadRepository.count() == 0) {
+            prioridadRepository.saveAll(List.of(
+                    new Prioridad(0, "Baja", 1),
+                    new Prioridad(0, "Media", 2),
+                    new Prioridad(0, "Alta", 3),
+                    new Prioridad(0, "Crítica", 4)
+            ));
+            log.info("Catálogo 'prioridades' inicializado.");
+        }
+
+        if (categoriaFallaRepository.count() == 0) {
+            categoriaFallaRepository.saveAll(List.of(
+                    new CategoriaFalla(0, "Conectividad"),
+                    new CategoriaFalla(0, "Enrutamiento"),
+                    new CategoriaFalla(0, "Servicio web"),
+                    new CategoriaFalla(0, "DNS"),
+                    new CategoriaFalla(0, "Red inalámbrica")
+            ));
+            log.info("Catálogo 'categorias_falla' inicializado.");
+        }
+    }
+    
 
     private void cargarNumerosEmpleadoPrueba() {
         if (numeroEmpleadoRepository.count() == 0) {
@@ -88,6 +152,7 @@ public class DataInitializer implements CommandLineRunner {
             Usuario cliente = new Usuario();
             cliente.setNombre("Cliente Fijo de Prueba");
             cliente.setEmail(emailCliente);
+            cliente.setTelefono("5512345678");
             cliente.setPassword(passwordEncoder.encode("Password123"));
             cliente.setRol("CLIENTE");
             cliente.setNumeroEmpleado(null);
@@ -105,6 +170,7 @@ public class DataInitializer implements CommandLineRunner {
             Usuario admin = new Usuario();
             admin.setNombre("Administrador Fijo de Prueba");
             admin.setEmail(emailAdmin);
+            admin.setTelefono("5587654321");
             admin.setPassword(passwordEncoder.encode("AdminPass123"));
             admin.setRol("ADMIN");
             admin.setNumeroEmpleado("EMP-ADMIN-FIJO");

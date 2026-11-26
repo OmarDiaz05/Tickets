@@ -2,6 +2,7 @@ package fes.proyecto.tickets.ptickets.dtos;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,6 +20,9 @@ public class UsuarioDtoIn {
     @Email(message = "El formato de correo no es válido")
     @NotBlank(message = "El correo es obligatorio")
     private String email;
+
+    @Size(max = 20, message = "El teléfono no debe exceder 20 caracteres")
+    private String telefono;
 
     @NotBlank(message = "La contraseña es obligatoria")
     private String password;

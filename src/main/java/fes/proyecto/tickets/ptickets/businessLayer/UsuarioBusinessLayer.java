@@ -128,6 +128,9 @@ public class UsuarioBusinessLayer {
 
         entity.setNombre(dtoIn.getNombre().trim());
         entity.setEmail(email);
+        entity.setTelefono(dtoIn.getTelefono() != null && !dtoIn.getTelefono().isBlank()
+                ? dtoIn.getTelefono().trim()
+                : null);
         entity.setPassword(codificarPassword(dtoIn.getPassword()));
         repository.save(entity);
 

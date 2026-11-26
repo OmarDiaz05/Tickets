@@ -29,6 +29,7 @@ public class Usuario {
 
     @Column(nullable = false, unique = true, length = 50)
     private String email;
+    
 
     @Column(nullable = false, length = 100)
     private String password; // hash BCrypt, nunca texto plano
@@ -38,6 +39,9 @@ public class Usuario {
 
     @Column(name = "numero_empleado", unique = true, length = 20)
     private String numeroEmpleado; // Solo aplica si el rol es el admin
+
+    @Column(length = 20)
+    private String telefono;
 
     @Column(nullable = false)
     private boolean verificado;
