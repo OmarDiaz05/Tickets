@@ -2,6 +2,7 @@ package fes.proyecto.tickets.ptickets.dtos;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -30,7 +31,9 @@ public class UsuarioDtoIn {
     @NotBlank(message = "El rol es obligatorio (CLIENTE o ADMIN)")
     private String rol;
 
-    private String numeroEmpleado; // Requerido si rol = ADMIN
+    // Requerido si rol = ADMIN; null permitido para clientes
+    @Pattern(regexp = "\\d{9}", message = "El número de empleado debe tener 9 dígitos")
+    private String numeroEmpleado;
 
     @NotBlank(message = "El guid es obligatorio")
     private String guid;

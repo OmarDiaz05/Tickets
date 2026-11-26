@@ -83,6 +83,10 @@ public class UsuarioBusinessLayer {
             }
 
             String clave = dtoIn.getNumeroEmpleado().trim();
+            if (!clave.matches("\\d{9}")) {
+                throw new SolicitudInvalidaException("El número de empleado debe tener 9 dígitos");
+            }
+
             numEmpleadoAutorizado = numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue(clave)
                     .orElseThrow(() -> new AccesoDenegadoException("Número de empleado no autorizado o inactivo"));
 

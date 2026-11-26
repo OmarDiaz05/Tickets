@@ -37,7 +37,7 @@ public class Usuario {
     @Column(nullable = false, length = 20)
     private String rol; // ya sea cliente o admin
 
-    @Column(name = "numero_empleado", unique = true, length = 20)
+    @Column(name = "numero_empleado", unique = true, length = 9)
     private String numeroEmpleado; // Solo aplica si el rol es el admin
 
     @Column(length = 20)

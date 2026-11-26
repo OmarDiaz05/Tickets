@@ -281,7 +281,7 @@ class SecurityConfigTest {
         u.setEmail(ADMIN_EMAIL);
         u.setPassword(passwordEncoder.encode(PASSWORD));
         u.setRol("ADMIN");
-        u.setNumeroEmpleado("EMP-2026-01");
+        u.setNumeroEmpleado("100000001");
         u.setVerificado(true);
         u.setActivo(true);
         u.setFechaRegistro(LocalDateTime.now());

@@ -112,7 +112,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"nombre\": \"Ing. Carlos Ruiz\",\n  \"email\": \"carlos.admin@aragon.unam.mx\",\n  \"password\": \"AdminPass123\",\n  \"rol\": \"ADMIN\",\n  \"numeroEmpleado\": \"EMP-2026-01\",\n  \"guid\": \"guid-admin-001\"\n}"
+          "raw": "{\n  \"nombre\": \"Ing. Carlos Ruiz\",\n  \"email\": \"carlos.admin@aragon.unam.mx\",\n  \"password\": \"AdminPass123\",\n  \"rol\": \"ADMIN\",\n  \"numeroEmpleado\": \"100000001\",\n  \"guid\": \"guid-admin-001\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/usuarios",
@@ -159,7 +159,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"nombre\": \"Ing. Carlos Ruiz\",\n  \"email\": \"carlos.admin@aragon.unam.mx\",\n  \"password\": \"AdminPass123\",\n  \"rol\": \"ADMIN\",\n  \"numeroEmpleado\": \"EMP-2026-01\",\n  \"guid\": \"guid-admin-001\"\n}"
+          "raw": "{\n  \"nombre\": \"Ing. Carlos Ruiz\",\n  \"email\": \"carlos.admin@aragon.unam.mx\",\n  \"password\": \"AdminPass123\",\n  \"rol\": \"ADMIN\",\n  \"numeroEmpleado\": \"100000001\",\n  \"guid\": \"guid-admin-001\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/usuarios",

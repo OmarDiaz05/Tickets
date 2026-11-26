@@ -20,12 +20,12 @@
                     <div class="mb-3">
                         <label for="username" class="form-label">Correo electrónico</label>
                         <input type="email" class="form-control" id="username" name="username"
-                               placeholder="usuario@aragon.unam.mx" required autofocus>
+                               placeholder="" required autofocus>
                     </div>
                     <div class="mb-4">
                         <label for="password" class="form-label">Contraseña</label>
                         <input type="password" class="form-control" id="password" name="password"
-                               placeholder="••••••••" required>
+                               placeholder="" required>
                     </div>
                     <button type="submit" class="btn btn-primario w-100 fw-semibold">Entrar</button>
                 </form>
@@ -34,7 +34,7 @@
 
                 <div class="d-grid gap-2">
                     <a th:href="@{/registro/cliente}" class="btn btn-outline-primary btn-sm">
-                        Crear cuenta de Cliente
+                        Crear cuenta como Cliente
                     </a>
                     <a th:href="@{/registro/admin}" class="btn btn-outline-secondary btn-sm">
                         Registrarse como Administrador
