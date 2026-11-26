@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Registro de Cliente')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar(null, null)}"></nav>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-5">
+            <div class="card card-auth p-4">
+                <h1 class="h4 text-center fw-bold mb-1">Registro de Cliente</h1>
+                <p class="text-muted text-center small mb-4">Crea una cuenta para reportar y dar seguimiento a fallas</p>
+
+                <div th:if="${mensajeError}" class="alert alert-danger py-2 small" th:text="${mensajeError}"></div>
+
+                <form th:action="@{/registro/cliente}" th:object="${usuario}" method="post">
+                    <input type="hidden" th:field="*{rol}">
+                    <input type="hidden" th:field="*{guid}">
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre completo</label>
+                        <input type="text" class="form-control" th:field="*{nombre}" placeholder="Ej. Laura Mendoza" required>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Correo electrónico</label>
+                        <input type="email" class="form-control" th:field="*{email}" placeholder="correo@aragon.unam.mx" required>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono <span class="text-muted small">(opcional)</span></label>
+                        <input type="text" class="form-control" th:field="*{telefono}" placeholder="5512345678">
+                        <div class="text-danger small" th:if="${#fields.hasErrors('telefono')}" th:errors="*{telefono}"></div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" class="form-control" th:field="*{password}" placeholder="Mínimo 6 caracteres" required>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primario w-100 fw-semibold">Registrarme como Cliente</button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <a th:href="@{/login}" class="small text-decoration-none">¿Ya tienes cuenta? Inicia sesión</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

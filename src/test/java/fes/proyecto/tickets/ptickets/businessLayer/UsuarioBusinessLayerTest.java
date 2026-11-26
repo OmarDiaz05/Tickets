@@ -13,6 +13,7 @@ import fes.proyecto.tickets.ptickets.exceptions.ReglaNegocioException;
 import fes.proyecto.tickets.ptickets.exceptions.SolicitudInvalidaException;
 import fes.proyecto.tickets.ptickets.repositories.INumeroEmpleadoRepository;
 import fes.proyecto.tickets.ptickets.repositories.IUsuarioRepository;
+import fes.proyecto.tickets.ptickets.security.UsuarioAutenticado;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -284,6 +287,61 @@ class UsuarioBusinessLayerTest {
         when(repository.findById(99)).thenReturn(Optional.empty());
 
         assertThrows(RecursoNoEncontradoException.class, () -> businessLayer.actualizar(99, dtoIn));
+    }
+
+    @Test
+    void actualizar_ClienteModificandoOtroUsuario_LanzaAccesoDenegado() {
+        UsuarioAutenticado clienteAuth = new UsuarioAutenticado(
+                10, "cliente@example.com", "hash", "CLIENTE", true);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(clienteAuth, null, clienteAuth.getAuthorities()));
+
+        try {
+            assertThrows(AccesoDenegadoException.class, () -> businessLayer.actualizar(20, dtoIn));
+            verify(repository, never()).save(any(Usuario.class));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void actualizar_ClienteModificandoSuPropioUsuario_ActualizaExitosamente() {
+        UsuarioAutenticado clienteAuth = new UsuarioAutenticado(
+                1, "juan@example.com", "hash", "CLIENTE", true);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(clienteAuth, null, clienteAuth.getAuthorities()));
+
+        try {
+            when(repository.findById(1)).thenReturn(Optional.of(usuarioExistente));
+            when(repository.existsByEmailAndIdNot("juan@example.com", 1)).thenReturn(false);
+
+            IdDto respuesta = businessLayer.actualizar(1, dtoIn);
+
+            assertEquals("Usuario actualizado correctamente", respuesta.getMensaje());
+            verify(repository).save(usuarioExistente);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void actualizar_AdminModificandoCualquierUsuario_ActualizaExitosamente() {
+        UsuarioAutenticado adminAuth = new UsuarioAutenticado(
+                99, "admin@example.com", "hash", "ADMIN", true);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(adminAuth, null, adminAuth.getAuthorities()));
+
+        try {
+            when(repository.findById(1)).thenReturn(Optional.of(usuarioExistente));
+            when(repository.existsByEmailAndIdNot("juan@example.com", 1)).thenReturn(false);
+
+            IdDto respuesta = businessLayer.actualizar(1, dtoIn);
+
+            assertEquals("Usuario actualizado correctamente", respuesta.getMensaje());
+            verify(repository).save(usuarioExistente);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 
     // ---------- borrar / activar ----------

@@ -14,6 +14,7 @@ public class UsuarioDto {
     private int id;
     private String nombre;
     private String email;
+    private String telefono;
     private String rol;
     private String numeroEmpleado;
     private boolean verificado;

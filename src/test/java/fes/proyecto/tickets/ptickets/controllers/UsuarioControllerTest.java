@@ -55,6 +55,7 @@ class UsuarioControllerTest {
         UsuarioDtoIn dtoIn = new UsuarioDtoIn();
         dtoIn.setNombre("Carlos Perez");
         dtoIn.setEmail("carlos@example.com");
+        dtoIn.setTelefono("5512345678");
         dtoIn.setPassword("secreto123");
         dtoIn.setRol("CLIENTE");
         dtoIn.setGuid("guid-001");
@@ -62,11 +63,13 @@ class UsuarioControllerTest {
     }
 
     private UsuarioDto usuarioDto() {
-        return new UsuarioDto(1, "Carlos Perez", "carlos@example.com", "CLIENTE", null,
-                false, LocalDateTime.now(), true);
+        return new UsuarioDto(1, "Carlos Perez", 
+        "carlos@example.com",
+        "5512345678", 
+        "CLIENTE", 
+        null,
+        false, LocalDateTime.now(), true);
     }
-
-    // ---------- POST ----------
 
     @Test
     void agregar_DatosValidos_RetornaHttp201() throws Exception {

@@ -35,7 +35,9 @@ import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.unauthenticated;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -266,5 +268,110 @@ class SecurityConfigTest {
         assertTrue(sesion.isInvalid());
         mockMvc.perform(get("/api/v1/usuarios").session(new MockHttpSession()))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ---------- roles y permisos (Apartados 4.3 y 4.7) ----------
+
+    private static final String ADMIN_EMAIL = "admin@example.com";
+
+    private Usuario usuarioAdmin() {
+        Usuario u = new Usuario();
+        u.setId(20);
+        u.setNombre("Carlos Admin");
+        u.setEmail(ADMIN_EMAIL);
+        u.setPassword(passwordEncoder.encode(PASSWORD));
+        u.setRol("ADMIN");
+        u.setNumeroEmpleado("EMP-2026-01");
+        u.setVerificado(true);
+        u.setActivo(true);
+        u.setFechaRegistro(LocalDateTime.now());
+        u.setGuid("guid-admin-001");
+        return u;
+    }
+
+    private MvcResult iniciarSesionAdmin() throws Exception {
+        when(usuarioRepository.findByEmail(ADMIN_EMAIL)).thenReturn(Optional.of(usuarioAdmin()));
+        return mockMvc.perform(post("/login")
+                        .param("username", ADMIN_EMAIL)
+                        .param("password", PASSWORD)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn();
+    }
+
+    @Test
+    void borrarUsuario_SinSesion_Retorna401() throws Exception {
+        mockMvc.perform(delete("/api/v1/usuarios/1").with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.mensaje").value("Se requiere iniciar sesión para acceder a este recurso"));
+
+        verify(usuarioBusinessLayer, never()).borrar(anyInt());
+    }
+
+    @Test
+    void borrarUsuario_ConSesionCliente_Retorna403PorRolInsuficiente() throws Exception {
+        MockHttpSession sesionCliente = (MockHttpSession) iniciarSesion().getRequest().getSession(false);
+        assertNotNull(sesionCliente);
+
+        mockMvc.perform(delete("/api/v1/usuarios/1")
+                        .session(sesionCliente)
+                        .with(csrf()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.mensaje").value("No tienes permiso para acceder a este recurso"));
+
+        verify(usuarioBusinessLayer, never()).borrar(anyInt());
+    }
+
+    @Test
+    void borrarUsuario_ConSesionAdminYCsrf_Retorna200() throws Exception {
+        MockHttpSession sesionAdmin = (MockHttpSession) iniciarSesionAdmin().getRequest().getSession(false);
+        assertNotNull(sesionAdmin);
+
+        when(usuarioBusinessLayer.borrar(1))
+                .thenReturn(new IdDto(1, "Usuario deshabilitado correctamente"));
+
+        mockMvc.perform(delete("/api/v1/usuarios/1")
+                        .session(sesionAdmin)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.mensaje").value("Usuario deshabilitado correctamente"));
+
+        verify(usuarioBusinessLayer).borrar(1);
+    }
+
+    @Test
+    void activarUsuario_ConSesionCliente_Retorna403() throws Exception {
+        MockHttpSession sesionCliente = (MockHttpSession) iniciarSesion().getRequest().getSession(false);
+        assertNotNull(sesionCliente);
+
+        mockMvc.perform(patch("/api/v1/usuarios/1/activar")
+                        .session(sesionCliente)
+                        .with(csrf()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.mensaje").value("No tienes permiso para acceder a este recurso"));
+
+        verify(usuarioBusinessLayer, never()).activar(anyInt());
+    }
+
+    @Test
+    void activarUsuario_ConSesionAdminYCsrf_Retorna200() throws Exception {
+        MockHttpSession sesionAdmin = (MockHttpSession) iniciarSesionAdmin().getRequest().getSession(false);
+        assertNotNull(sesionAdmin);
+
+        when(usuarioBusinessLayer.activar(1))
+                .thenReturn(new IdDto(1, "Usuario reactivado correctamente"));
+
+        mockMvc.perform(patch("/api/v1/usuarios/1/activar")
+                        .session(sesionAdmin)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.mensaje").value("Usuario reactivado correctamente"));
+
+        verify(usuarioBusinessLayer).activar(1);
     }
 }

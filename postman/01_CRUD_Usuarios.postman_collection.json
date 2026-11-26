@@ -1,0 +1,456 @@
+{
+  "info": {
+    "_postman_id": "b1b704c3-1d22-48ec-9f5b-6f17e3f8a001",
+    "name": "PTickets - 01 CRUD Usuarios",
+    "description": "Colección de pruebas automatizadas para el módulo CRUD de Usuarios de PTickets (Sistema de Tickets de Atención a Fallas). Diseñada para ejecución secuencial mediante Postman Collection Runner.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "string"
+    },
+    {
+      "key": "clienteId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "adminId",
+      "value": "2",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Crear Usuario Cliente (201)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 201 Created\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Respuesta contiene ID y mensaje de éxito\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"id\");",
+              "    pm.expect(jsonData).to.have.property(\"mensaje\");",
+              "    pm.expect(jsonData.mensaje).to.eql(\"Usuario registrado con éxito\");",
+              "    ",
+              "    // Guardar automáticamente el ID devuelto en una variable de colección",
+              "    pm.collectionVariables.set(\"clienteId\", jsonData.id.toString());",
+              "    console.log(\"Variable clienteId guardada: \" + jsonData.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Romeo\",\n  \"email\": \"romeo@aragon.unam.mx\",\n  \"password\": \"RomeoPass123\",\n  \"rol\": \"CLIENTE\",\n  \"guid\": \"guid-romeo-001\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios"
+          ]
+        },
+        "description": "Registra un nuevo usuario con rol CLIENTE y guarda su ID en la variable clienteId."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Crear Usuario Admin (201)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 201 Created\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Respuesta contiene ID y mensaje de éxito del Admin\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"id\");",
+              "    pm.expect(jsonData).to.have.property(\"mensaje\");",
+              "    pm.expect(jsonData.mensaje).to.eql(\"Usuario registrado con éxito\");",
+              "    ",
+              "    // Guardar el ID devuelto en una variable llamada adminId",
+              "    pm.collectionVariables.set(\"adminId\", jsonData.id.toString());",
+              "    console.log(\"Variable adminId guardada: \" + jsonData.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ing. Carlos Ruiz\",\n  \"email\": \"carlos.admin@aragon.unam.mx\",\n  \"password\": \"AdminPass123\",\n  \"rol\": \"ADMIN\",\n  \"numeroEmpleado\": \"EMP-2026-01\",\n  \"guid\": \"guid-admin-001\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios"
+          ]
+        },
+        "description": "Registra un usuario administrador y guarda su ID en la variable adminId."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Validar Idempotencia GUID Duplicado (208)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 208 Already Reported\", function () {",
+              "    pm.response.to.have.status(208);",
+              "});",
+              "",
+              "pm.test(\"Mensaje de validación de GUID duplicado / idempotencia\", function () {",
+              "    var responseText = pm.response.text();",
+              "    pm.expect(responseText).to.include(\"Usuario registrado previamente (GUID duplicado)\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Ing. Carlos Ruiz\",\n  \"email\": \"carlos.admin@aragon.unam.mx\",\n  \"password\": \"AdminPass123\",\n  \"rol\": \"ADMIN\",\n  \"numeroEmpleado\": \"EMP-2026-01\",\n  \"guid\": \"guid-admin-001\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios"
+          ]
+        },
+        "description": "Valida la idempotencia enviando el mismo GUID sin modificar. Espera HTTP 208 Already Reported."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Listar Usuarios Activos (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Respuesta es una lista y contiene al menos 2 usuarios\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.be.an(\"array\");",
+              "    pm.expect(jsonData.length).to.be.at.least(2);",
+              "});",
+              "",
+              "pm.test(\"Debe mostrar los usuarios activos registrados (Romeo y Carlos Ruiz)\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var tieneRomeo = jsonData.some(function (u) {",
+              "        return u.nombre && u.nombre.includes(\"Romeo\") && u.activo === true;",
+              "    });",
+              "    var tieneCarlos = jsonData.some(function (u) {",
+              "        return u.nombre && u.nombre.includes(\"Carlos Ruiz\") && u.activo === true;",
+              "    });",
+              "    ",
+              "    pm.expect(tieneRomeo, \"Debe incluir al usuario activo Romeo\").to.be.true;",
+              "    pm.expect(tieneCarlos, \"Debe incluir al usuario activo Carlos Ruiz\").to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios"
+          ]
+        },
+        "description": "Obtiene la lista de todos los usuarios activos en el sistema."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Consultar Usuario por ID (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"El usuario consultado corresponde a clienteId y está activo\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var clienteId = Number(pm.collectionVariables.get(\"clienteId\"));",
+              "    pm.expect(jsonData.id).to.eql(clienteId);",
+              "    pm.expect(jsonData.nombre).to.include(\"Romeo\");",
+              "    pm.expect(jsonData.email).to.eql(\"romeo@aragon.unam.mx\");",
+              "    pm.expect(jsonData.activo).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios/{{clienteId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{clienteId}}"
+          ]
+        },
+        "description": "Consulta el usuario cliente recién creado utilizando su ID dinámico."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Consultar Usuario Inexistente ID 999 (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 404 Not Found para usuario inexistente\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test(\"Respuesta contiene mensaje de error de no encontrado\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"mensaje\");",
+              "    pm.expect(jsonData.mensaje).to.include(\"no encontrado\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios/999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "999"
+          ]
+        },
+        "description": "Verifica que consultar un usuario con ID inexistente (999) responda con HTTP 404 Not Found."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Actualizar Usuario (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 200 OK al actualizar\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Respuesta confirma actualización exitosa del usuario\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var clienteId = Number(pm.collectionVariables.get(\"clienteId\"));",
+              "    pm.expect(jsonData.id).to.eql(clienteId);",
+              "    pm.expect(jsonData).to.have.property(\"mensaje\");",
+              "    pm.expect(jsonData.mensaje).to.include(\"actualizado\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Romeo Mendoza\",\n  \"email\": \"romeo@aragon.unam.mx\",\n  \"password\": \"RomeoPass456\",\n  \"rol\": \"CLIENTE\",\n  \"guid\": \"guid-romeo-001\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios/{{clienteId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{clienteId}}"
+          ]
+        },
+        "description": "Actualiza el nombre y contraseña del usuario cliente."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Borrado Lógico Usuario (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 200 OK en borrado lógico\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Mensaje esperado: Usuario deshabilitado correctamente\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.mensaje).to.eql(\"Usuario deshabilitado correctamente\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios/{{clienteId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{clienteId}}"
+          ]
+        },
+        "description": "Realiza el borrado lógico del usuario cliente cambiando su estado a inactivo."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Verificar Borrado Lógico en Listado (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code es 200 OK al listar tras borrado lógico\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Romeo ya NO aparece en el listado de usuarios activos\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var clienteId = Number(pm.collectionVariables.get(\"clienteId\"));",
+              "    var romeoPresente = jsonData.some(function (u) {",
+              "        return u.id === clienteId || (u.nombre && u.nombre.includes(\"Romeo\"));",
+              "    });",
+              "    pm.expect(romeoPresente, \"El usuario deshabilitado (Romeo) no debe estar en activos\").to.be.false;",
+              "});",
+              "",
+              "pm.test(\"Carlos Ruiz CONTINÚA apareciendo en el listado de usuarios activos\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var adminId = Number(pm.collectionVariables.get(\"adminId\"));",
+              "    var adminPresente = jsonData.some(function (u) {",
+              "        return (adminId && u.id === adminId) || (u.nombre && u.nombre.includes(\"Carlos Ruiz\"));",
+              "    });",
+              "    pm.expect(adminPresente, \"El usuario administrador (Carlos Ruiz) debe seguir activo\").to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/usuarios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios"
+          ]
+        },
+        "description": "Verifica que el usuario borrado lógicamente ya no figure en la lista de activos, mientras que el admin sigue activo."
+      },
+      "response": []
+    }
+  ]
+}

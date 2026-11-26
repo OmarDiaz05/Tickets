@@ -15,6 +15,7 @@ public class Mappers {
                 entity.getId(),
                 entity.getNombre(),
                 entity.getEmail(),
+                entity.getTelefono(),
                 entity.getRol(),
                 entity.getNumeroEmpleado(),
                 entity.isVerificado(),
@@ -33,10 +34,14 @@ public class Mappers {
         }
         String rolNormalizado = dtoIn.getRol().trim().toUpperCase();
         String numEmpleado = "ADMIN".equals(rolNormalizado) ? dtoIn.getNumeroEmpleado() : null;
+        String tel = (dtoIn.getTelefono() != null && !dtoIn.getTelefono().isBlank())
+                ? dtoIn.getTelefono().trim()
+                : null;
 
         Usuario entity = new Usuario();
         entity.setNombre(dtoIn.getNombre().trim());
         entity.setEmail(dtoIn.getEmail().trim().toLowerCase());
+        entity.setTelefono(tel);
         entity.setPassword(passwordHash);
         entity.setRol(rolNormalizado);
         entity.setNumeroEmpleado(numEmpleado);
