@@ -30,6 +30,11 @@
       "key": "ticketId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "misTicketsTotal",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -658,6 +663,741 @@
               ]
             },
             "description": "Reenvía el ticket con el mismo guid de la petición 10.2: debe responder 208 con el ID existente."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "11. Tickets - Consultas (Punto 5.3)",
+      "description": "Ejecutar después de la carpeta 10 (usa su sesión de cliente y la variable ticketId).",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Spring Security exige el token CSRF en POST: se copia la cookie XSRF-TOKEN a la cabecera X-XSRF-TOKEN",
+              "const token = pm.cookies.get(\"XSRF-TOKEN\");",
+              "if (token) {",
+              "    pm.request.headers.upsert({ key: \"X-XSRF-TOKEN\", value: token });",
+              "} else {",
+              "    // Primera petición: se obtiene la cookie con una petición pública",
+              "    pm.sendRequest(pm.variables.replaceIn(\"{{baseUrl}}/v3/api-docs\"), function (err, res) {",
+              "        const nuevo = res && res.cookies.get(\"XSRF-TOKEN\");",
+              "        if (nuevo) {",
+              "            pm.request.headers.upsert({ key: \"X-XSRF-TOKEN\", value: nuevo });",
+              "        }",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "11.1 Cliente - Listar Mis Tickets (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta es una página con los campos esperados\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.all.keys(\"contenido\", \"pagina\", \"tamanio\", \"totalElementos\", \"totalPaginas\");",
+                  "    pm.expect(jsonData.pagina).to.eql(0);",
+                  "    pm.expect(jsonData.tamanio).to.eql(10);",
+                  "    pm.collectionVariables.set(\"misTicketsTotal\", jsonData.totalElementos.toString());",
+                  "});",
+                  "",
+                  "pm.test(\"Solo aparecen tickets del cliente de la sesión\", function () {",
+                  "    pm.response.json().contenido.forEach(function (t) {",
+                  "        pm.expect(t.correoCliente).to.eql(\"cliente.fijo@aragon.unam.mx\");",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test(\"Orden por fecha de registro descendente\", function () {",
+                  "    var fechas = pm.response.json().contenido.map(function (t) { return t.fechaRegistro; });",
+                  "    var ordenadas = fechas.slice().sort().reverse();",
+                  "    pm.expect(fechas).to.eql(ordenadas);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ]
+            },
+            "description": "Lista los tickets del cliente de la sesión (carpeta 10). Guarda el total en misTicketsTotal."
+          },
+          "response": []
+        },
+        {
+          "name": "11.2 Cliente - Filtros Ajenos Se Ignoran (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"administradorId y soloMios no cambian lo que ve el cliente\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.totalElementos.toString()).to.eql(pm.collectionVariables.get(\"misTicketsTotal\"));",
+                  "    jsonData.contenido.forEach(function (t) {",
+                  "        pm.expect(t.correoCliente).to.eql(\"cliente.fijo@aragon.unam.mx\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?administradorId=999999&soloMios=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "administradorId",
+                  "value": "999999"
+                },
+                {
+                  "key": "soloMios",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Un cliente que intenta filtrar por administrador o soloMios sigue viendo solo sus tickets."
+          },
+          "response": []
+        },
+        {
+          "name": "11.3 Cliente - Detalle de Ticket Propio (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Devuelve el ticket creado en la petición 10.2\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id.toString()).to.eql(pm.collectionVariables.get(\"ticketId\"));",
+                  "    pm.expect(jsonData.folio).to.match(/^FESA-\\d{4}-[0-9A-Z]{3,}$/);",
+                  "    pm.expect(jsonData.correoCliente).to.eql(\"cliente.fijo@aragon.unam.mx\");",
+                  "    pm.expect(jsonData).to.not.have.property(\"password\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/{{ticketId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "{{ticketId}}"
+              ]
+            },
+            "description": "Detalle del ticket creado en la petición 10.2."
+          },
+          "response": []
+        },
+        {
+          "name": "11.4 Rango de Fechas Inválido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"ErrorDto con mensaje claro\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(400);",
+                  "    pm.expect(jsonData.mensaje).to.include(\"no puede ser posterior\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?fechaDesde=2026-12-31&fechaHasta=2026-01-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "fechaDesde",
+                  "value": "2026-12-31"
+                },
+                {
+                  "key": "fechaHasta",
+                  "value": "2026-01-01"
+                }
+              ]
+            },
+            "description": "fechaDesde posterior a fechaHasta."
+          },
+          "response": []
+        },
+        {
+          "name": "11.5 Size Mayor a 50 Se Limita (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"El tamaño de página se limita a 50\", function () {",
+                  "    pm.expect(pm.response.json().tamanio).to.eql(50);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?size=500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "500"
+                }
+              ]
+            },
+            "description": "Pide 500 por página; la API responde con tamaño 50."
+          },
+          "response": []
+        },
+        {
+          "name": "11.6 Ticket Inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"ErrorDto de recurso no encontrado\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(404);",
+                  "    pm.expect(jsonData.mensaje).to.eql(\"Ticket no encontrado con id 999999\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "999999"
+              ]
+            },
+            "description": "Id que no existe."
+          },
+          "response": []
+        },
+        {
+          "name": "11.7 Login Admin Fijo (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Inicio de sesión exitoso\", function () {",
+                  "    pm.expect(pm.response.json().mensaje).to.eql(\"Inicio de sesión exitoso\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "admin.fijo@aragon.unam.mx",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "AdminPass123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            },
+            "description": "Cambia la sesión al administrador fijo de DataInitializer."
+          },
+          "response": []
+        },
+        {
+          "name": "11.8 Admin - Listar Todos (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"El admin ve tickets de clientes\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.totalElementos).to.be.at.least(1);",
+                  "    var ids = jsonData.contenido.map(function (t) { return t.id.toString(); });",
+                  "    if (jsonData.totalElementos <= 50) {",
+                  "        pm.expect(ids).to.include(pm.collectionVariables.get(\"ticketId\"));",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?size=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Sin filtros: el administrador ve todos los tickets."
+          },
+          "response": []
+        },
+        {
+          "name": "11.9 Admin - Filtros Combinados (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Todos los resultados cumplen los filtros\", function () {",
+                  "    pm.response.json().contenido.forEach(function (t) {",
+                  "        pm.expect(t.estado).to.eql(\"Abierto\");",
+                  "        pm.expect(t.fechaRegistro.substring(0, 4)).to.eql(\"2026\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?estadoId=1&prioridadId=2&categoriaId=1&fechaDesde=2026-01-01&fechaHasta=2026-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "estadoId",
+                  "value": "1"
+                },
+                {
+                  "key": "prioridadId",
+                  "value": "2"
+                },
+                {
+                  "key": "categoriaId",
+                  "value": "1"
+                },
+                {
+                  "key": "fechaDesde",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "fechaHasta",
+                  "value": "2026-12-31"
+                }
+              ]
+            },
+            "description": "Estado, prioridad, categoría y rango de fechas combinados. Ajusta los ids a los de tu catálogo."
+          },
+          "response": []
+        },
+        {
+          "name": "11.10 Admin - Solo Mis Tickets (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Solo tickets asignados al admin de la sesión\", function () {",
+                  "    pm.response.json().contenido.forEach(function (t) {",
+                  "        pm.expect(t.administradorAsignado).to.eql(\"Administrador Fijo de Prueba\");",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?soloMios=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "soloMios",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "soloMios=true: tickets asignados al administrador de la sesión."
+          },
+          "response": []
+        },
+        {
+          "name": "11.11 Admin - Sin Asignar (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Ningún ticket tiene administrador asignado\", function () {",
+                  "    pm.response.json().contenido.forEach(function (t) {",
+                  "        pm.expect(t.administradorAsignado).to.be.null;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?sinAsignar=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "sinAsignar",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Tickets que todavía no tienen administrador."
+          },
+          "response": []
+        },
+        {
+          "name": "11.12 Admin - Detalle de Ticket de un Cliente (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"El admin puede ver el ticket del cliente\", function () {",
+                  "    pm.expect(pm.response.json().id.toString()).to.eql(pm.collectionVariables.get(\"ticketId\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/{{ticketId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "{{ticketId}}"
+              ]
+            },
+            "description": "Un administrador puede ver cualquier ticket."
+          },
+          "response": []
+        },
+        {
+          "name": "11.13 Logout (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "logout"
+              ]
+            },
+            "description": "Cierra la sesión para la siguiente petición."
+          },
+          "response": []
+        },
+        {
+          "name": "11.14 Listar Sin Sesión (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code es 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"ErrorDto de no autenticado\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(401);",
+                  "    pm.expect(jsonData.mensaje).to.eql(\"Se requiere iniciar sesión para acceder a este recurso\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ]
+            },
+            "description": "Sin sesión la consulta responde 401."
           },
           "response": []
         }

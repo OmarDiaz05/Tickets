@@ -4,16 +4,20 @@ import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import fes.proyecto.tickets.ptickets.entities.Ticket;
 import fes.proyecto.tickets.ptickets.helpers.FolioGenerator;
 
-public interface ITicketRepository extends JpaRepository<Ticket, Integer> {
+public interface ITicketRepository extends JpaRepository<Ticket, Integer>, JpaSpecificationExecutor<Ticket> {
 
     Optional<Ticket> findByGuid(String guid);
 
@@ -38,5 +42,26 @@ public interface ITicketRepository extends JpaRepository<Ticket, Integer> {
     /** Consecutivo máximo usado en el año en curso; 0 si aún no hay tickets. */
     default int obtenerConsecutivoMaximoDelAnioActual() {
         return obtenerConsecutivoMaximo(Year.now().getValue());
+    }
+
+    // ---------- Consultas (Punto 5.3) ----------
+
+    /**
+     * Búsqueda paginada con Specification. El EntityGraph trae usuario,
+     * administrador, categoría, prioridad y estado en la misma consulta
+     * (LEFT JOIN), para no hacer una consulta extra por ticket (N+1).
+     */
+    @Override
+    @EntityGraph(attributePaths = {"usuario", "administradorAsignado", "categoria", "prioridad", "estado"})
+    Page<Ticket> findAll(Specification<Ticket> spec, Pageable pageable);
+
+    /** Ticket con todas sus relaciones cargadas en una sola consulta. */
+    @EntityGraph(attributePaths = {"usuario", "administradorAsignado", "categoria", "prioridad", "estado"})
+    @Query("SELECT t FROM Ticket t WHERE t.id = :id")
+    Optional<Ticket> buscarDetallePorId(@Param("id") int id);
+
+    /** Tickets que cumplen el filtro, con el orden y la página indicados. */
+    default Page<Ticket> buscar(TicketFiltro filtro, Pageable pageable) {
+        return findAll(TicketSpecifications.conFiltro(filtro), pageable);
     }
 }
