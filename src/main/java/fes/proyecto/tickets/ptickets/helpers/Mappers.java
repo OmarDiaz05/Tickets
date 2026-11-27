@@ -1,6 +1,11 @@
 package fes.proyecto.tickets.ptickets.helpers;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+
+import fes.proyecto.tickets.ptickets.dtos.PaginaDto;
 import fes.proyecto.tickets.ptickets.dtos.TicketDto;
 import fes.proyecto.tickets.ptickets.dtos.TicketDtoIn;
 import fes.proyecto.tickets.ptickets.dtos.UsuarioDto;
@@ -60,6 +65,14 @@ public class Mappers {
         dto.setPruebasPosteriores(entity.getPruebasPosteriores());
         dto.setLeccionesAprendidas(entity.getLeccionesAprendidas());
         return dto;
+    }
+
+    public static PaginaDto<TicketDto> toPaginaDto(Page<Ticket> page) {
+        List<TicketDto> contenido = page.getContent().stream()
+                .map(ticket -> toDto(ticket))
+                .toList();
+        return new PaginaDto<>(contenido, page.getNumber(), page.getSize(),
+                page.getTotalElements(), page.getTotalPages());
     }
 
     /**

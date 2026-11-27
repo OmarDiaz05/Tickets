@@ -69,6 +69,9 @@ public class SecurityConfig {
                 // Punto 5.2 - Solo los clientes levantan tickets
                 .requestMatchers(HttpMethod.POST, "/api/v1/tickets").hasRole("CLIENTE")
 
+                // Punto 5.3 - Consulta de tickets (el businessLayer limita al cliente a los suyos)
+                .requestMatchers(HttpMethod.GET, "/api/v1/tickets", "/api/v1/tickets/*").hasAnyRole("CLIENTE", "ADMIN")
+
                 .anyRequest().authenticated())
 
             .csrf(csrf -> csrf

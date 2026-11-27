@@ -33,6 +33,8 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// Base en memoria solo para pruebas de repositorio (no se usa al ejecutar la app)
+	testRuntimeOnly 'com.h2database:h2'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	// Vistas web (Fase 4 - Punto 4.8)
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
