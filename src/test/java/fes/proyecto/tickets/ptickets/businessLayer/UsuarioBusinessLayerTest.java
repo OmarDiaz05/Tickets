@@ -17,6 +17,8 @@ import fes.proyecto.tickets.ptickets.security.UsuarioAutenticado;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -78,7 +80,7 @@ class UsuarioBusinessLayerTest {
     private NumeroEmpleado numeroEmpleado(boolean usado) {
         NumeroEmpleado num = new NumeroEmpleado();
         num.setId(7);
-        num.setNumeroEmpleado("EMP001");
+        num.setNumeroEmpleado("100000001");
         num.setNombreReferencia("Ana Admin");
         num.setActivo(true);
         num.setUsado(usado);
@@ -88,7 +90,7 @@ class UsuarioBusinessLayerTest {
 
     private void configurarAdmin() {
         dtoIn.setRol("ADMIN");
-        dtoIn.setNumeroEmpleado("EMP001");
+        dtoIn.setNumeroEmpleado("100000001");
     }
 
     // ---------- agregar ----------
@@ -180,12 +182,27 @@ class UsuarioBusinessLayerTest {
         verify(repository, never()).save(any(Usuario.class));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"ABCDEFGHI", "10000000A", "12345678", "1234567890", "100-00001"})
+    void agregar_AdminNumeroEmpleadoFormatoInvalido_LanzaSolicitudInvalida(String numero) {
+        dtoIn.setRol("ADMIN");
+        dtoIn.setNumeroEmpleado(numero);
+        when(repository.findByGuid(GUID)).thenReturn(Optional.empty());
+        when(repository.existsByEmail("juan@example.com")).thenReturn(false);
+
+        SolicitudInvalidaException ex =
+                assertThrows(SolicitudInvalidaException.class, () -> businessLayer.agregar(dtoIn));
+        assertEquals("El número de empleado debe tener 9 dígitos", ex.getMessage());
+        verify(numeroEmpleadoRepository, never()).findByNumeroEmpleadoAndActivoTrue(any());
+        verify(repository, never()).save(any(Usuario.class));
+    }
+
     @Test
     void agregar_AdminNumeroEmpleadoNoAutorizado_LanzaAccesoDenegado() {
         configurarAdmin();
         when(repository.findByGuid(GUID)).thenReturn(Optional.empty());
         when(repository.existsByEmail("juan@example.com")).thenReturn(false);
-        when(numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue("EMP001")).thenReturn(Optional.empty());
+        when(numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue("100000001")).thenReturn(Optional.empty());
 
         assertThrows(AccesoDenegadoException.class, () -> businessLayer.agregar(dtoIn));
         verify(repository, never()).save(any(Usuario.class));
@@ -196,7 +213,7 @@ class UsuarioBusinessLayerTest {
         configurarAdmin();
         when(repository.findByGuid(GUID)).thenReturn(Optional.empty());
         when(repository.existsByEmail("juan@example.com")).thenReturn(false);
-        when(numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue("EMP001"))
+        when(numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue("100000001"))
                 .thenReturn(Optional.of(numeroEmpleado(true)));
 
         ReglaNegocioException ex = assertThrows(ReglaNegocioException.class, () -> businessLayer.agregar(dtoIn));
@@ -211,7 +228,7 @@ class UsuarioBusinessLayerTest {
         NumeroEmpleado num = numeroEmpleado(false);
         when(repository.findByGuid(GUID)).thenReturn(Optional.empty());
         when(repository.existsByEmail("juan@example.com")).thenReturn(false);
-        when(numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue("EMP001")).thenReturn(Optional.of(num));
+        when(numeroEmpleadoRepository.findByNumeroEmpleadoAndActivoTrue("100000001")).thenReturn(Optional.of(num));
         when(repository.save(any(Usuario.class))).thenAnswer(invocation -> {
             Usuario u = invocation.getArgument(0);
             u.setId(2);

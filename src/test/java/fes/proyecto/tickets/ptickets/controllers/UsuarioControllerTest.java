@@ -25,8 +25,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -148,6 +151,48 @@ class UsuarioControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.mensaje").value("Rol inválido. Debe ser CLIENTE o ADMIN"));
+    }
+
+    @Test
+    void agregar_PasswordMenorA6Caracteres_RetornaHttp400() throws Exception {
+        UsuarioDtoIn dtoIn = dtoValido();
+        dtoIn.setPassword("12345");
+
+        mockMvc.perform(post("/api/v1/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoIn)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detalles",
+                        hasItem("password: La contraseña debe tener al menos 6 caracteres")));
+
+        verify(businessLayer, never()).agregar(any());
+    }
+
+    @Test
+    void agregar_PasswordDe6Caracteres_RetornaHttp201() throws Exception {
+        UsuarioDtoIn dtoIn = dtoValido();
+        dtoIn.setPassword("123456");
+        when(businessLayer.agregar(any(UsuarioDtoIn.class)))
+                .thenReturn(new ResultadoRegistro(new IdDto(1, "Usuario registrado con éxito"), false));
+
+        mockMvc.perform(post("/api/v1/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoIn)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void actualizar_PasswordMenorA6Caracteres_RetornaHttp400() throws Exception {
+        UsuarioDtoIn dtoIn = dtoValido();
+        dtoIn.setPassword("abc");
+
+        mockMvc.perform(put("/api/v1/usuarios/{id}", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoIn)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detalles",
+                        hasItem("password: La contraseña debe tener al menos 6 caracteres")));
     }
 
     @Test

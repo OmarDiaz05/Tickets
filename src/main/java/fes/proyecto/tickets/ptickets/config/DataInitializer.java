@@ -119,15 +119,15 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Inicializando números de empleado autorizados para pruebas (Apartado 4.6)...");
 
             List<NumeroEmpleado> lista = List.of(
-                crearNumero("EMP-2026-01", "Ing. Carlos Ruiz", false, true),
-                crearNumero("EMP-2026-02", "Ing. Laura Mendoza", false, true),
-                crearNumero("EMP-2026-03", "Ing. Fernando Álvarez", false, true),
-                crearNumero("EMP-2026-04", "Técnico Soporte Redes", false, true),
-                crearNumero("EMP-2026-05", "Coordinador Infraestructura", false, true),
+                crearNumero("100000001", "Ing. Carlos Ruiz", false, true),
+                crearNumero("100000002", "Ing. Laura Mendoza", false, true),
+                crearNumero("100000003", "Ing. Fernando Álvarez", false, true),
+                crearNumero("100000004", "Técnico Soporte Redes", false, true),
+                crearNumero("100000005", "Coordinador Infraestructura", false, true),
                 // Registro para validar rechazo por número ya utilizado (409 Conflict)
-                crearNumero("EMP-USADO-01", "Empleado Ya Registrado Previamente", true, true),
+                crearNumero("100000006", "Empleado Ya Registrado Previamente", true, true),
                 // Registro para validar rechazo por número no autorizado o inactivo (403 Forbidden)
-                crearNumero("EMP-INACTIVO-01", "Empleado Inactivo o Dado de Baja", false, false)
+                crearNumero("100000007", "Empleado Inactivo o Dado de Baja", false, false)
             );
 
             numeroEmpleadoRepository.saveAll(lista);
@@ -173,7 +173,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setTelefono("5587654321");
             admin.setPassword(passwordEncoder.encode("AdminPass123"));
             admin.setRol("ADMIN");
-            admin.setNumeroEmpleado("EMP-ADMIN-FIJO");
+            admin.setNumeroEmpleado("100000000");
             admin.setVerificado(true);
             admin.setActivo(true);
             admin.setFechaRegistro(LocalDateTime.now());

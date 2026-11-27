@@ -12,4 +12,5 @@ public interface IUsuarioRepository extends JpaRepository<Usuario, Integer> {
     boolean existsByEmailAndIdNot(String email, int id);
     List<Usuario> findByActivoTrue();
     List<Usuario> findByRolAndActivoTrueAndVerificadoTrue(String rol);
+    List<Usuario> findByRolAndActivoTrue(String rol);
 }

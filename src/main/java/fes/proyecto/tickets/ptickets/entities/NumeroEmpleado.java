@@ -24,10 +24,10 @@ public class NumeroEmpleado {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @Column(name = "numero_empleado", nullable = false, unique = true, length = 20)
+    @Column(name = "numero_empleado", nullable = false, unique = true, length = 9)
     private String numeroEmpleado;
 
-    @Column(name = "nombre_referencia", nullable = false, length = 100)
+    @Column(name = "nombre_referencia", nullable = true, length = 100)
     private String nombreReferencia;
 
     @Column(nullable = false)

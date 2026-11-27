@@ -19,32 +19,33 @@
                     <input type="hidden" th:field="*{guid}">
 
                     <div class="mb-3">
-                        <label class="form-label">Número de empleado autorizado</label>
+                        <label class="form-label">Número de empleado</label>
                         <input type="text" class="form-control" th:field="*{numeroEmpleado}"
-                               placeholder="Ej. EMP-2026-01" required>
+                               placeholder="9 dígitos" inputmode="numeric" maxlength="9" pattern="\d{9}" required>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('numeroEmpleado')}" th:errors="*{numeroEmpleado}"></div>
                         <div class="form-text">Cada clave autorizada solo puede utilizarse una vez.</div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Nombre completo</label>
-                        <input type="text" class="form-control" th:field="*{nombre}" placeholder="Ej. Ing. Carlos Ruiz" required>
+                        <input type="text" class="form-control" th:field="*{nombre}" placeholder="" required>
                         <div class="text-danger small" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}"></div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Correo electrónico</label>
-                        <input type="email" class="form-control" th:field="*{email}" placeholder="admin@aragon.unam.mx" required>
+                        <input type="email" class="form-control" th:field="*{email}" placeholder="" required>
                         <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Teléfono <span class="text-muted small">(opcional)</span></label>
-                        <input type="text" class="form-control" th:field="*{telefono}" placeholder="5587654321">
+                        <input type="text" class="form-control" th:field="*{telefono}" placeholder="">
                     </div>
 
                     <div class="mb-4">
                         <label class="form-label">Contraseña</label>
-                        <input type="password" class="form-control" th:field="*{password}" required>
+                        <input type="password" class="form-control" th:field="*{password}" placeholder="Mínimo 6 caracteres" minlength="6" required>
                         <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
                     </div>
 
